@@ -1,6 +1,6 @@
 --[[
 Name: DBIcon-1.0
-Revision: $Rev: 12 $
+Revision: $Rev: 15 $
 Author(s): Rabbit (rabbit.magtheridon@gmail.com)
 Description: Allows addons to register to recieve a lightweight minimap icon as an alternative to more heavy LDB displays.
 Dependencies: LibStub
@@ -33,7 +33,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 --
 
 local DBICON10 = "LibDBIcon-1.0"
-local DBICON10_MINOR = tonumber(("$Rev: 12 $"):match("(%d+)"))
+local DBICON10_MINOR = tonumber(("$Rev: 15 $"):match("(%d+)"))
 if not LibStub then error(DBICON10 .. " requires LibStub.") end
 local ldb = LibStub("LibDataBroker-1.1", true)
 if not ldb then error(DBICON10 .. " requires LibDataBroker-1.1.") end
@@ -109,12 +109,20 @@ local function updatePosition(button)
 	if y > 0 then q = q + 2 end
 	local minimapShape = GetMinimapShape and GetMinimapShape() or "ROUND"
 	local quadTable = minimapShapes[minimapShape]
+	local width = Minimap:GetWidth()
+	local height = Minimap:GetHeight()
+	if not width or width <= 0 then width = 140 end
+	if not height or height <= 0 then height = 140 end
+	-- 80 on the 140px minimap is half the side plus a 10px margin.
+	local w = (width / 2) + 10
+	local h = (height / 2) + 10
 	if quadTable[q] then
-		x, y = x*80, y*80
+		x, y = x*w, y*h
 	else
-		local diagRadius = 103.13708498985 --math.sqrt(2*(80)^2)-10
-		x = math.max(-80, math.min(x*diagRadius, 80))
-		y = math.max(-80, math.min(y*diagRadius, 80))
+		local diagRadiusW = math.sqrt(2*(w)^2)-10
+		local diagRadiusH = math.sqrt(2*(h)^2)-10
+		x = math.max(-w, math.min(x*diagRadiusW, w))
+		y = math.max(-h, math.min(y*diagRadiusH, h))
 	end
 	button:SetPoint("CENTER", Minimap, "CENTER", x, y)
 end
@@ -259,5 +267,22 @@ function lib:DisableLibrary()
 	for name, object in pairs(lib.objects) do
 		object:Hide()
 	end
+end
+
+local function refreshMinimapButtons()
+	for _, button in pairs(lib.objects) do
+		updatePosition(button)
+	end
+end
+
+if not lib.minimapSizeHooked then
+	lib.minimapSizeHooked = true
+	Minimap:HookScript("OnSizeChanged", refreshMinimapButtons)
+end
+
+for _, button in pairs(lib.objects) do
+	button:SetScript("OnDragStart", onDragStart)
+	button:SetScript("OnDragStop", onDragStop)
+	updatePosition(button)
 end
 
